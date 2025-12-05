@@ -8,6 +8,9 @@
         :root { --primary: #2563eb; --danger: #ef4444; --gray: #f3f4f6; --border: #e5e7eb; }
         body { font-family: "Helvetica Neue", Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f8fafc; color: #1e293b; }
         
+        /* タイトル装飾 */
+        .app-title { text-align: center; color: var(--primary); margin: 10px 0 30px 0; font-size: 2.2rem; letter-spacing: 0.05em; text-shadow: 2px 2px 0px rgba(0,0,0,0.05); }
+
         /* ステップバー */
         .stepper { display: flex; justify-content: space-between; margin-bottom: 30px; position: relative; }
         .stepper::before { content: ""; position: absolute; top: 15px; left: 0; width: 100%; height: 2px; background: #ddd; z-index: 0; }
@@ -101,6 +104,7 @@
 
         @media print {
             body { background-color: white; padding: 0; margin: 0; }
+            .app-title { display: none; } /* 印刷時はアプリタイトルを消す */
             .panel-left, .stepper, button, .note, #save-status { display: none !important; }
             .container { display: block; }
             .panel-right { width: 100%; box-shadow: none; margin: 0; padding: 0; }
@@ -112,6 +116,8 @@
     </style>
 </head>
 <body>
+
+    <h1 class="app-title">席替えマスター</h1>
 
     <div class="stepper">
         <div class="step active" id="step-nav-1">① 配置・班</div>
@@ -176,26 +182,25 @@
             </div>
 
             <div id="step-3" class="step-content">
-
-            <div style="margin-bottom: 15px; background: #e0f2fe; padding: 15px; border-radius: 8px; border: 1px solid #bae6fd; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-                <div>
-                    <p style="margin: 0 0 5px 0; font-size: 0.95rem; font-weight: bold; color: #0369a1;">
-                        📥 入力用テンプレート
-                    </p>
-                    <p style="margin: 0; font-size: 0.85rem; color: #0c4a6e;">
-                        Excelで入力後、コピーして下の枠に貼り付けてください。<br>
-                        <span style="font-size: 0.8rem; color: #64748b;">※ドロップダウンで選択できます</span>
-                    </p>
-                </div>
-                
-                <a href="./sekigae_meibo.xlsx" download="席替え名簿テンプレート.xlsx" style="text-decoration: none;">
-                    <button type="button" style="background: #fff; color: #0284c7; border: 1px solid #0284c7; padding: 8px 15px; font-weight: bold; cursor: pointer; border-radius: 6px; display: flex; align-items: center; gap: 5px; width: auto; margin: 0;">
-                        Excelをダウンロード
-                    </button>
-                </a>
-            </div>
                 <h2>③ 児童情報の入力</h2>
                 
+                <div style="margin-bottom: 15px; background: #e0f2fe; padding: 15px; border-radius: 8px; border: 1px solid #bae6fd; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                    <div>
+                        <p style="margin: 0 0 5px 0; font-size: 0.95rem; font-weight: bold; color: #0369a1;">
+                            📥 入力用テンプレート
+                        </p>
+                        <p style="margin: 0; font-size: 0.85rem; color: #0c4a6e;">
+                            Excelで入力後、コピーして下の枠に貼り付けてください。<br>
+                            <span style="font-size: 0.8rem; color: #64748b;">※ドロップダウンで選択できます</span>
+                        </p>
+                    </div>
+                    
+                    <a href="./sekigae_meibo.xlsx" download="席替え名簿テンプレート.xlsx" style="text-decoration: none;">
+                        <button type="button" style="background: #fff; color: #0284c7; border: 1px solid #0284c7; padding: 8px 15px; font-weight: bold; cursor: pointer; border-radius: 6px; display: flex; align-items: center; gap: 5px; width: auto; margin: 0;">
+                            Excelをダウンロード
+                        </button>
+                    </a>
+                </div>
                 <div class="counter-box" style="background:#f0fdf4; border-color:#bbf7d0;">
                     <div class="counter-row">
                         <span style="color:#166534">入力人数:</span>
@@ -259,7 +264,7 @@
 
     <script>
         // --- データ管理 ---
-        const SAVE_KEY = "seatingMasterData_v4_3"; // バージョン変更
+        const SAVE_KEY = "seatingMasterData_v4_3"; 
         let currentStep = 1;
         let editMode = 'group'; 
         let seatConfig = []; 
@@ -592,14 +597,14 @@
             let fixedStudents = students.filter(s => s.fixed !== null);
             let normalStudents = students.filter(s => s.fixed === null);
 
-            // 【重要】固定席の処理ループ（forEachからfor...ofに変更し、returnで関数ごと終了できるように修正）
+            // 【重要】固定席の処理（性別エラーチェック付き）
             for (const st of fixedStudents) {
                 const idx = st.fixed - 1; 
 
                 // 1. 範囲チェック
                 if (idx < 0 || idx >= seatConfig.length) {
                     alert(`⛔ エラー：実行を中止します。\n\n${st.name}さんの指定座席番号「${st.fixed}」は存在しません。`);
-                    return; // 実行中止
+                    return; 
                 }
 
                 const seatProp = seatConfig[idx];
@@ -607,28 +612,25 @@
                 // 2. 使用不可チェック
                 if (seatProp.unused) {
                     alert(`⛔ エラー：実行を中止します。\n\n${st.name}さんの指定座席「${st.fixed}番」は「使用不可(×)」に設定されています。`);
-                    return; // 実行中止
+                    return; 
                 }
 
                 // 3. 重複チェック
                 if (allocation[idx]) {
                     alert(`⛔ エラー：実行を中止します。\n\n座席「${st.fixed}番」に複数の児童が固定されています。\n対象：${allocation[idx].name}さん、${st.name}さん`);
-                    return; // 実行中止
+                    return; 
                 }
 
-                // 4. 【追加機能】性別チェック
-                // 男子指定席に女子（またはその他）
+                // 4. 性別チェック
                 if (seatProp.genderType === 'male' && st.gender !== 'male') {
                     alert(`⛔ エラー：実行を中止します。\n\n${st.name}さん（${st.gender === 'female' ? '女子' : 'その他'}）が「男子指定席（${st.fixed}番）」に固定されています。\n\n②男女指定の設定 または ③児童情報の固定席番号 を見直してください。`);
-                    return; // 実行中止
+                    return; 
                 }
-                // 女子指定席に男子（またはその他）
                 if (seatProp.genderType === 'female' && st.gender !== 'female') {
                     alert(`⛔ エラー：実行を中止します。\n\n${st.name}さん（${st.gender === 'male' ? '男子' : 'その他'}）が「女子指定席（${st.fixed}番）」に固定されています。\n\n②男女指定の設定 または ③児童情報の固定席番号 を見直してください。`);
-                    return; // 実行中止
+                    return; 
                 }
 
-                // 全てクリアしたら配置
                 allocation[idx] = st;
                 if(seatProp.group > 0) {
                     groupStats[seatProp.group].total += st.score;
@@ -637,16 +639,13 @@
                 availableSeats = availableSeats.filter(s => s.index !== idx);
             }
 
-            // --- 以降は通常の割り当てロジック ---
-
-            // ソート
+            // 通常割り当て
             normalStudents.sort((a, b) => {
                 if (a.vision !== b.vision) return a.vision ? -1 : 1;
                 if (a.ngList.length !== b.ngList.length) return b.ngList.length - a.ngList.length; 
                 return b.score - a.score;
             });
 
-            // 割り当て
             normalStudents.forEach(student => {
                 let bestSeat = null;
                 let maxScore = -Infinity;
@@ -697,30 +696,15 @@
             document.getElementById('result-stats').style.display = 'block';
         }
 
-        // Before: 上下左右のみ
-        // After: 斜めを含む全8方向をチェック
         function getNeighbors(index, cols) {
             const neighbors = [];
-            const r = Math.floor(index / cols); // 行番号
-            const c = index % cols;             // 列番号
+            const r = Math.floor(index / cols);
+            const c = index % cols;
             const rows = parseInt(document.getElementById('rows').value);
-
-            // チェックする方向（[行の変化, 列の変化]）
-            // 上下左右 + 斜め4方向 = 合計8方向
-            const directions = [
-                [-1, 0], [1, 0], [0, -1], [0, 1],   // 上下左右
-                [-1, -1], [-1, 1], [1, -1], [1, 1]  // 斜め
-            ];
-
-            for (let d of directions) {
-                const nr = r + d[0]; // 隣の行
-                const nc = c + d[1]; // 隣の列
-
-                // 教室の範囲内に収まっているか確認
-                if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
-                    neighbors.push(nr * cols + nc); // インデックスに変換して追加
-                }
-            }
+            if (r > 0) neighbors.push(index - cols);
+            if (r < rows - 1) neighbors.push(index + cols);
+            if (c > 0) neighbors.push(index - 1);
+            if (c < cols - 1) neighbors.push(index + 1);
             return neighbors;
         }
 
@@ -755,4 +739,3 @@
     </script>
 </body>
 </html>
-
