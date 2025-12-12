@@ -66,7 +66,15 @@
 
         .seat-num { position: absolute; top: 2px; left: 5px; font-size: 0.7rem; color: #999; }
         .seat-name { font-weight: bold; font-size: 1.1rem; z-index: 2; text-align: center; line-height: 1.1; }
-        .seat-group { position: absolute; bottom: 2px; right: 5px; font-size: 0.7rem; font-weight: bold; background: rgba(255,255,255,0.8); padding: 0 4px; border-radius: 4px; pointer-events: none;}
+        
+        /* 班バッジのスタイル調整 */
+        .seat-group { 
+            position: absolute; bottom: 2px; right: 5px; 
+            font-size: 0.75rem; font-weight: bold; 
+            background: rgba(255,255,255,0.9); border: 1px solid #ddd;
+            padding: 1px 5px; border-radius: 4px; 
+            pointer-events: none; z-index: 5; color: #444;
+        }
         
         .icon-vision { position: absolute; top: 2px; right: 2px; font-size: 1rem; }
         .icon-lock { position: absolute; top: 2px; left: 2px; font-size: 0.8rem; }
@@ -81,6 +89,7 @@
         .seat[data-unused="true"] .seat-name { display: none; }
         .seat[data-unused="true"]::before { content: "×"; font-size: 2rem; color: #94a3b8; }
 
+        /* 班の色分け（性別指定がない場合のみ背景色として適用） */
         .seat:not([data-gender="male"]):not([data-gender="female"])[data-group="1"] { background-color: #fee2e2; }
         .seat:not([data-gender="male"]):not([data-gender="female"])[data-group="2"] { background-color: #dcfce7; }
         .seat:not([data-gender="male"]):not([data-gender="female"])[data-group="3"] { background-color: #dbeafe; }
@@ -104,7 +113,7 @@
 
         @media print {
             body { background-color: white; padding: 0; margin: 0; }
-            .app-title { display: none; } /* 印刷時はアプリタイトルを消す */
+            .app-title { display: none; } 
             .panel-left, .stepper, button, .note, #save-status { display: none !important; }
             .container { display: block; }
             .panel-right { width: 100%; box-shadow: none; margin: 0; padding: 0; }
@@ -201,6 +210,7 @@
                         </button>
                     </a>
                 </div>
+
                 <div class="counter-box" style="background:#f0fdf4; border-color:#bbf7d0;">
                     <div class="counter-row">
                         <span style="color:#166534">入力人数:</span>
@@ -264,7 +274,7 @@
 
     <script>
         // --- データ管理 ---
-        const SAVE_KEY = "seatingMasterData_v4_3"; 
+        const SAVE_KEY = "seatingMasterData_v4_5"; 
         let currentStep = 1;
         let editMode = 'group'; 
         let seatConfig = []; 
@@ -396,6 +406,7 @@
                 numSpan.textContent = i + 1;
                 seatDiv.appendChild(numSpan);
 
+                // 生徒情報の表示
                 if (allocation[i]) {
                     const p = allocation[i];
                     const nameSpan = document.createElement('span');
@@ -416,14 +427,16 @@
                         lIcon.textContent = '🔒';
                         seatDiv.appendChild(lIcon);
                     }
-                } else {
-                    if (conf.group > 0 && !conf.unused) {
-                        const gBadge = document.createElement('span');
-                        gBadge.className = 'seat-group';
-                        gBadge.textContent = conf.group + "班";
-                        seatDiv.appendChild(gBadge);
-                    }
                 }
+                
+                // ★修正点: 班番号は常に表示する（人が座っていても）
+                if (conf.group > 0 && !conf.unused) {
+                    const gBadge = document.createElement('span');
+                    gBadge.className = 'seat-group';
+                    gBadge.textContent = conf.group + "班";
+                    seatDiv.appendChild(gBadge);
+                }
+
                 seatDiv.onclick = () => handleSeatClick(i);
                 container.appendChild(seatDiv);
             });
@@ -597,31 +610,23 @@
             let fixedStudents = students.filter(s => s.fixed !== null);
             let normalStudents = students.filter(s => s.fixed === null);
 
-            // 【重要】固定席の処理（性別エラーチェック付き）
+            // 固定席処理
             for (const st of fixedStudents) {
                 const idx = st.fixed - 1; 
 
-                // 1. 範囲チェック
                 if (idx < 0 || idx >= seatConfig.length) {
                     alert(`⛔ エラー：実行を中止します。\n\n${st.name}さんの指定座席番号「${st.fixed}」は存在しません。`);
                     return; 
                 }
-
                 const seatProp = seatConfig[idx];
-
-                // 2. 使用不可チェック
                 if (seatProp.unused) {
                     alert(`⛔ エラー：実行を中止します。\n\n${st.name}さんの指定座席「${st.fixed}番」は「使用不可(×)」に設定されています。`);
                     return; 
                 }
-
-                // 3. 重複チェック
                 if (allocation[idx]) {
                     alert(`⛔ エラー：実行を中止します。\n\n座席「${st.fixed}番」に複数の児童が固定されています。\n対象：${allocation[idx].name}さん、${st.name}さん`);
                     return; 
                 }
-
-                // 4. 性別チェック
                 if (seatProp.genderType === 'male' && st.gender !== 'male') {
                     alert(`⛔ エラー：実行を中止します。\n\n${st.name}さん（${st.gender === 'female' ? '女子' : 'その他'}）が「男子指定席（${st.fixed}番）」に固定されています。\n\n②男女指定の設定 または ③児童情報の固定席番号 を見直してください。`);
                     return; 
@@ -696,29 +701,28 @@
             document.getElementById('result-stats').style.display = 'block';
         }
 
-// ↓この関数を丸ごと上書きしてください
-function getNeighbors(index, cols) {
-    const neighbors = [];
-    const r = Math.floor(index / cols); // 行
-    const c = index % cols;             // 列
-    const rows = parseInt(document.getElementById('rows').value);
+        // 斜めNG対応版 getNeighbors
+        function getNeighbors(index, cols) {
+            const neighbors = [];
+            const r = Math.floor(index / cols);
+            const c = index % cols;
+            const rows = parseInt(document.getElementById('rows').value);
 
-    // チェックする方向（[行の移動, 列の移動]）
-    const directions = [
-        [-1, 0], [1, 0], [0, -1], [0, 1],   // 上下左右
-        [-1, -1], [-1, 1], [1, -1], [1, 1]  // ★斜め4方向を追加
-    ];
+            // 上下左右 + 斜め
+            const directions = [
+                [-1, 0], [1, 0], [0, -1], [0, 1],   
+                [-1, -1], [-1, 1], [1, -1], [1, 1]  
+            ];
 
-    for (let d of directions) {
-        const nr = r + d[0];
-        const nc = c + d[1];
-        // 教室の範囲内ならリストに追加
-        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
-            neighbors.push(nr * cols + nc);
+            for (let d of directions) {
+                const nr = r + d[0];
+                const nc = c + d[1];
+                if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+                    neighbors.push(nr * cols + nc);
+                }
+            }
+            return neighbors;
         }
-    }
-    return neighbors;
-}
 
         function showStats(stats) {
             const table = document.getElementById('stats-table');
@@ -751,4 +755,3 @@ function getNeighbors(index, cols) {
     </script>
 </body>
 </html>
-
